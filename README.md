@@ -1,1 +1,2 @@
 # Komunikator-internetowy-typu-GG
+
