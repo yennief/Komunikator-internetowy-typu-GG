@@ -7,11 +7,15 @@ public class Test {
         EventQueue.invokeLater(new Runnable() {
             @Override
             public void run() {
-                try {
-                    new Application();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+
+                    try {
+
+                        new Application();
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
             }
         });
     }
