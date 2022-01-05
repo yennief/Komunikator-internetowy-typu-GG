@@ -80,6 +80,15 @@ public class Client {
         return serverMessage;
     }
 
+    public String receive_msg() throws IOException {
+
+        String serverMessage="";
+        if(reader.ready()) {
+            serverMessage = reader.readLine();
+        }
+        return serverMessage;
+    }
+
     public void close(Socket clientSocket, BufferedReader reader,PrintWriter writer){
         try{
             if(clientSocket !=null){

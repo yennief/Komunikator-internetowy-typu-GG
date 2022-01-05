@@ -23,22 +23,4 @@ public class Application{
 
     }
 
-    public class MyRunnable implements Runnable{
-        @Override
-        public void run(){
-
-
-            try {
-
-
-                while (true) {
-
-
-                }
-            } catch (Exception e) {
-
-            }
-
-        }
-    }
 }

@@ -72,6 +72,13 @@ public class StartWindow {
 
                         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
+                        Chat chat = new Chat(client);
+                        frame.setContentPane(chat.get_panel());
+                        frame.pack();
+                        frame.setSize(500,400);
+
+                        frame.setVisible(true);
+
                     }
 
                 } catch (Exception ex) {
@@ -127,6 +134,13 @@ public class StartWindow {
 
 
                         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+                        Chat chat = new Chat(client);
+                        frame.setContentPane(chat.get_panel());
+                        frame.pack();
+                        frame.setSize(500,400);
+
+                        frame.setVisible(true);
 
                         //frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
                         //user registered and logged in
