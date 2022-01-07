@@ -50,7 +50,6 @@ public class StartWindow {
                     empty_error.setVisible(false);
                     empty_error2.setVisible(false);
                     user_exist.setVisible(false);
-
                     userName = name_field.getText();
                     userPassword = String.valueOf(password_field.getPassword());
 
@@ -69,14 +68,11 @@ public class StartWindow {
                     } else {
 
                         login_success.setVisible(true);
-
                         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
                         Chat chat = new Chat(client);
                         frame.setContentPane(chat.get_panel());
                         frame.pack();
                         frame.setSize(500,400);
-
                         frame.setVisible(true);
 
                     }
@@ -114,8 +110,6 @@ public class StartWindow {
                         ioException.printStackTrace();
                     }
                     String message="";
-                    String message2="";
-
                     client = new Client(socket, userName, userPassword);
                     try {
                         message = client.register();
@@ -126,24 +120,15 @@ public class StartWindow {
                         user_exist.setVisible(true);
                     } else {
 
-                        client.getnewClientSocket();
-                        message2 = client.checkLogin();
-                        if(message2.equals("Login successful")){
-                            reg_login_success.setVisible(true);
-                        }
-
-
-                        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
+                        client.new_socket();
+                        client.checkLogin();
                         Chat chat = new Chat(client);
+                        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                         frame.setContentPane(chat.get_panel());
                         frame.pack();
                         frame.setSize(500,400);
-
                         frame.setVisible(true);
 
-                        //frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-                        //user registered and logged in
                     }
 
                 } catch (Exception ex) {
@@ -165,4 +150,7 @@ public class StartWindow {
         return panel;
     }
 
+    private void createUIComponents() {
+        // TODO: place custom component creation code here
+    }
 }
