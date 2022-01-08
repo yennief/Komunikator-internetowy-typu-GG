@@ -10,20 +10,28 @@ public class Chat {
 
     private JPanel panel;
     private JLabel user_name;
+    private JLabel user_already_friend;
+    private JLabel user_does_not_exist;
     private JButton add_friend;
+    private JButton delete_friend;
     private JButton send;
-    private JButton new_message;
+    private JButton load_chat;
     private JTextField add_friend_field;
     private JTextField send_msg_field;
-    private JTextArea chat;
     private JList friends_list;
+    private JTextPane chat;
     private String message = "";
     private Client client;
     private String userName;
+    private String message_to="";
+
 
     public Chat(Client client){
 
         this.client = client;
+        user_already_friend.setVisible(false);
+        user_does_not_exist.setVisible(false);
+
         user_name.setText(client.getUsername());
         MyRunnable mr = new MyRunnable();
         Thread thread = new Thread(mr);
@@ -33,35 +41,99 @@ public class Chat {
         send.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                user_already_friend.setVisible(false);
+                user_does_not_exist.setVisible(false);
+                try {
+                    if(friends_list.getSelectedIndex()==-1){
+                        JOptionPane.showMessageDialog(new JFrame(), "Proszę wybrać użytkownika z listy znajomych", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                    else {
 
+                        message_to = client.getFriend(friends_list.getSelectedIndex());
+                        client.send_message(message_to.trim(), send_msg_field.getText());
+                        send_msg_field.setText("");
+                        chat.setText(client.load_conversation(message_to.trim()));
+                    }
+                } catch (IOException ex) {
+                    //ex.printStackTrace();
+                }
             }
         });
 
         add_friend.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-
+                user_already_friend.setVisible(false);
+                user_does_not_exist.setVisible(false);
                 userName = add_friend_field.getText();
+                String message="";
                 try {
-                    client.add_friend(userName);
+                    message = client.add_friend(userName);
                 } catch (IOException ioException) {
                     ioException.printStackTrace();
+                }
+                if(message.equals("User does not exist")){
+                    user_does_not_exist.setVisible(true);
+                }
+                else if(message.equals("User is already a friend")){
+                    user_already_friend.setVisible(true);
                 }
                 load_list_friends(friends_list,client.getFriends_list());
                 add_friend_field.setText("");
 
-
             }
         });
 
-        new_message.addActionListener(new ActionListener() {
+        delete_friend.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                user_already_friend.setVisible(false);
+                user_does_not_exist.setVisible(false);
+                userName = add_friend_field.getText();
 
+                String message="";
+                try {
+                    message = client.delete_friend(userName);
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                }
+                if(message.equals("User does not exist")){
+                    user_does_not_exist.setVisible(true);
+                }
+                load_list_friends(friends_list,client.getFriends_list());
+
+                add_friend_field.setText("");
 
             }
         });
 
+        load_chat.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                user_already_friend.setVisible(false);
+                user_does_not_exist.setVisible(false);
+
+                try {
+                    if(friends_list.getSelectedIndex()==-1){
+                        JOptionPane.showMessageDialog(new JFrame(), "Proszę wybrać użytkownika z listy znajomych", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                    else {
+                        message_to=client.getFriend(friends_list.getSelectedIndex());
+                        chat.setText(client.load_conversation(message_to.trim()));
+
+                        //List<String> list_friends_copy = new ArrayList<>(client.getFriends_list());
+                        //System.out.println(list_friends_copy.get(friends_list.getSelectedIndex()));
+                        //list_friends_copy.set(friends_list.getSelectedIndex(), message_to.trim());
+                        //load_list_friends(friends_list,list_friends_copy);
+
+
+                    }
+                } catch (IOException ex) {
+                    //ex.printStackTrace();
+                }
+
+            }
+        });
 
     }
 
@@ -84,28 +156,52 @@ public class Chat {
 
     }
 
+    public void delete_name_from_list(String name, List friends){
+        if(friends.contains(name)){
+            friends.remove(name);
+            load_list_friends(friends_list,client.getFriends_list());
+        }
+
+    }
+
     public class MyRunnable implements Runnable{
         @Override
         public void run(){
 
-            //System.out.println("WEJSCIE");
-
             while (true) {
 
                 try {
-                    message = client.receive_msg();
 
+                    message = client.receive_msg();
                     if (!message.equals("")) {
 
                         //System.out.println(message);
-                        String message2 = message.substring(0,1); // literka
+                        String message2 = message.substring(0,1);
                         //System.out.println(message2);
                         if(message2.equals("a")){
 
-                            message = message.substring(2); // imie
-                            //System.out.println(message);
-                            check_name_in_list(message,client.getFriends_list());
+                            message = message.substring(2);
+                            check_name_in_list(message.trim(),client.getFriends_list());
                         }
+                        else if(message2.equals("d")){
+                            message = message.substring(2);
+                            delete_name_from_list(message.trim(),client.getFriends_list());
+                        }
+                        /*else if(message2.equals("m")){
+                            System.out.println("Odczytuje wiadomosc");
+                            message = message.substring(2);
+                            System.out.println(message);
+                            List<String> list = new ArrayList<>(client.getFriends_list());
+                            for (int i = 0; i < list.size(); i++) {
+                                if (list .get(i).equals(message.trim())) {
+                                    list .set(i, message + "- new message");
+                                    load_list_friends(friends_list,list);
+
+                                }
+                            }
+
+
+                        }*/
 
                     }
 

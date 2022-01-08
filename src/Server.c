@@ -15,241 +15,194 @@
 #define SERVER_PORT 1234
 #define QUEUE_SIZE 5
 #define MAX 100
-
-int flg=0;
-
-typedef struct
-{
- int fd;
- int id;
- int status;
- char username[MAX];
- char password[MAX];
- int friends_list[MAX];
-
-}thread_data_t;
-
-thread_data_t clients[MAX];
+#define BUF 1024
 
 struct index
 {
     int id;
 };
 
+typedef struct
+{
+ int fd;
+ char username[MAX];
+ char password[MAX];
+ int if_logged_in;
+ char messages[MAX][(4+MAX+BUF)*MAX];
+ int friends_list[MAX];
+
+}thread_data_t;
+
+thread_data_t clients[MAX];
+
 int users_number=0;
 
 pthread_mutex_t clients_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-/*void queue_add(thread_data_t *cl){
-  pthread_mutex_lock(&clients_mutex);
-
-  for(int i=0; i < MAX; ++i){
-    if(!clients[i]){
-      clients[i] = cl;
-      break;
-    }
-  }
-
-  pthread_mutex_unlock(&clients_mutex);
-}
-
-void queue_remove(int id){
-  pthread_mutex_lock(&clients_mutex);
-
-  for(int i=0; i < MAX; ++i){
-    if(clients[i]){
-      if(clients[i]->id == id){
-        clients[i] = NULL;
-        break;
-      }
-    }
-  }
-
-  pthread_mutex_unlock(&clients_mutex);
-}
-
-void remove_all(){
-  pthread_mutex_lock(&clients_mutex);
-
-  for(int i=0; i < MAX; ++i){
-    if(clients[i]){
-        clients[i] = NULL;
-      }
-    }
-  pthread_mutex_unlock(&clients_mutex);
-}
-
-void show_queue(){
-
-  char buf[100];
-
-  for(int i=0; i < MAX; ++i){
-    if(clients[i]){
-      sprintf(buf, "%s, ", clients[i]->username);
-      //printf("%d, ", clients[i]->id);
-      write(1,buf,strlen(buf));
-    }
-
-    }
-    sprintf(buf, "\n");
-    write(1,buf,strlen(buf));
-
-}
-
-
-void send_message(char *s, int id){
-  pthread_mutex_lock(&clients_mutex);
-
-  for(int i=0; i<MAX; ++i){
-    if(clients[i]){
-      if(clients[i]->id != id){
-        if(write(clients[i]->fd, s, strlen(s)) < 0){
-          perror("ERROR: write to descriptor failed");
-          break;
-        }
-      }
-    }
-  }
-
-  pthread_mutex_unlock(&clients_mutex);
-}
-
-void send_to_all(char *s){
-
-    pthread_mutex_lock(&clients_mutex);
-
-    for(int i=0; i<MAX; ++i){
-        if(clients[i]){
-           if(write(clients[i]->fd, s, strlen(s)) < 0){
-             perror("ERROR: write to descriptor failed");
-             break;
-           }
-        }
-    }
-    pthread_mutex_unlock(&clients_mutex);
-}*/
-
-void add_friend(char *login_friend, int index){
+void add_friend(char *login_friend, int idx){
 
     int found;
     for (int i=0;i<users_number;i++){
         found = strcmp(clients[i].username,login_friend);
-        if(found == 0 && index != i && clients[index].friends_list[i]==0){
+        if(found == 0 && clients[idx].friends_list[i]==0 && idx != i){
 
-            //printf("Check4\n");
-            clients[index].friends_list[i]=1;
-            clients[i].friends_list[index]=1;
+            clients[idx].friends_list[i]=1;
+            clients[i].friends_list[idx]=1;
             char buf[]="Added friend\n";
-            write(clients[index].fd ,buf, sizeof(buf));
+            write(clients[idx].fd ,buf, sizeof(buf));
 
             //Send a username to the added client of a friend who just added them, so they can be added to them automatically too
-            char buf2[1000]="a\t";
-            strcat(buf2,clients[index].username);
+            char buf2[4+MAX]="a\t";
+            strcat(buf2,clients[idx].username);
             strcat(buf2,"\n");
             write(clients[i].fd ,buf2, sizeof(buf2));
-            printf("%s added friend with login : %s\n",clients[index].username,login_friend);
-            printf("%s added friend with login : %s\n",clients[i].username,clients[index].username);
             return;
         }
-        if(found == 0 && index != i && clients[index].friends_list[i]==1){
-
-            //printf("Check6\n");
+        if(found == 0 && clients[idx].friends_list[i]==1 && idx != i){
             char buf[]="User is already a friend\n";
-            write(clients[index].fd ,buf, sizeof(buf));
+            write(clients[idx].fd ,buf, sizeof(buf));
             return;
-
         }
     }
 
-    //printf("Check5\n");
-    char buf[]="User doesn't exist\n";
-    write(clients[index].fd ,buf, sizeof(buf));
-
+    char buf[]="User does not exist\n";
+    write(clients[idx].fd ,buf, sizeof(buf));
 
 }
 
+void load_conversation(char *username,int idx){
+    int found;
+    int length=0;
+    for (int i=0;i<users_number;i++){
+         found = strcmp(clients[i].username,username);
 
-//funkcja opisującą zachowanie wątku - musi przyjmować argument typu (void *) i zwracać (void *)
+         if(found == 0 && clients[idx].friends_list[i]==1 && idx != i){
+             char message[4+MAX+BUF]="";
+             length = strlen(clients[idx].messages[i]);
+             int k=0;
+             for(int j=0;j<length;j++){
+                 if (clients[idx].messages[i][j]=='\n'){
+                     write(clients[idx].fd,message,strlen(message));
+                     k=0;
+                     memset(message,0,strlen(message));
+
+                 }
+                message[k]=clients[idx].messages[i][j];
+                k++;
+             }
+             write(clients[idx].fd,"\n",1);
+             write(clients[idx].fd,"stop\n",5);
+         }
+    }
+}
+
+void send_message(char* username,int idx,char received_msg[]){
+
+    char message[4+MAX+BUF]="m\t";
+    int found;
+    //printf("%d\n", idx);
+    for (int i=0;i<users_number;i++){
+        found = strcmp(clients[i].username,username);
+        //printf("%d\n", found);
+        if(found == 0 && clients[idx].friends_list[i]==1 && idx != i){
+            strcat(message,clients[idx].username);
+            strcat(message,":");
+            strcat(message,"\t");
+            strcat(message,received_msg);
+            strcat(message,"\n");
+            strcat(clients[i].messages[idx],message);
+            strcat(clients[idx].messages[i],message);
+            /*if(clients[idx].if_logged_in==1){
+                char message2[4+MAX]="m\t";
+                strcat(message2,clients[idx].username);
+                strcat(message2,"\t");
+                strcat(message2,"\n");
+                write(clients[i].fd,message2,sizeof(message2));
+            }*/
+            //printf("Check sending\n");
+            char buf[]="sent\n";
+            write(clients[idx].fd ,buf, sizeof(buf));
+
+            return;
+        }
+    }
+    char buf[]="User does not exist\n";
+    write(clients[idx].fd ,buf, sizeof(buf));
+
+}
+
+void delete_friend(int idx, char *username){
+    int found;
+    for (int i=0;i<users_number;i++){
+        found = strcmp(clients[i].username,username);
+        if(found == 0 && idx != i && clients[idx].friends_list[i]==1){
+
+            clients[idx].friends_list[i]=0;
+            clients[i].friends_list[idx]=0;
+            char buf[]="Deleted friend\n";
+            write(clients[idx].fd ,buf, sizeof(buf));
+
+            char buf2[4+MAX]="d\t";
+            strcat(buf2,clients[idx].username);
+            strcat(buf2,"\n");
+            write(clients[i].fd ,buf2, sizeof(buf2));
+            return;
+        }
+    }
+
+    char buf[]="User does not exist\n";
+    write(clients[idx].fd ,buf, sizeof(buf));
+
+}
+
 void *ThreadBehavior(void *t_data)
 {
 
     pthread_detach(pthread_self());
     struct index *th_data = (struct index*)t_data;
 
-    printf("Check2\n");
-
-    char buf[100];
     while(1){
-        memset(buf, 0, sizeof(buf));
-        //for(int i=0;i<sizeof(buf);i++){buf[i]='\0';}
-        read(clients[th_data->id].fd,buf,sizeof(buf));
+        char buf[4+MAX+BUF]="";
+        read(clients[th_data->id].fd, buf, sizeof(buf));
+        char username[MAX]="";
+        char message[BUF]="";
+        int login_size=0;
+        int message_size=0;
+        for(int i=2;i<MAX+2 && buf[i]!='\t';i++){
+            username[i-2]=buf[i];
+            login_size=i;
+        }
 
         if(buf[0]=='A'){
 
-           printf("Check3\n");
-
-           char username_to_add[MAX]="";
-           char username[MAX]="";
-           int found=1;
-           int idx;
-           int log_size=0;
-
-           for(int i=2;i<MAX && buf[i]!='\t';i++){
-                      username_to_add[i-2]=buf[i];
-                      log_size=i;
-           }
-
-           pthread_mutex_lock(&clients_mutex);
-           add_friend(username_to_add,th_data->id);
-           pthread_mutex_unlock(&clients_mutex);
+           add_friend(username,th_data->id);
 
         }
+        else if(buf[0]=='l'){
 
+            load_conversation(username, th_data->id);
 
-        /*if(strcmp(buf,"quit\n")==0){
-          flag=1;
-          sprintf(buf2, "Usuwanie klienta\n");
-          write(1,buf2,strlen(buf2));
-          memset(buf2, 0, sizeof(buf2));
+        }
+        else if(buf[0]=='M'){
 
-        }*/
+            for(int i=2+login_size;i<2+login_size+BUF && buf[i]!='\t';i++){
+                  message[i-2-login_size]=buf[i];
+                  message_size=i;
+            }
 
+            send_message(username,th_data->id,message);
+
+        }
+        else if(buf[0]=='Q'){
+            clients[th_data->id].if_logged_in=0;
+        }
+        else if(buf[0]=='D'){
+            delete_friend(th_data->id,username);
+        }
     }
-
-    //close((*th_data).fd);
-
 
     pthread_exit(NULL);
 }
-
-/*
-void *if_exit(void *t_data)
-{
-
-    thread_data_t *th_data = (thread_data_t*)t_data;
-    char buf[100];
-    while(1){
-        memset(buf, 0, sizeof(buf));
-        for(int i=0;i<sizeof(buf);i++){buf[i]='\0';}
-        if(strcmp(fgets(buf,sizeof(buf),stdin),"quit\n")==0){
-
-        //send_to_all(buf);
-        //remove_all();
-        exit(1);
-
-        }
-    }
-    //dostęp do pól struktury: (*th_data).pole
-    //TODO (przy zadaniu 1) klawiatura -> wysyłanie albo odbieranie -> wyświetlanie
-    close((*th_data).fd);
-    //queue_remove((*th_data).id);
-    free(th_data);
-
-
-    pthread_detach(pthread_self());
-    pthread_exit(NULL);
-}*/
-
 
 void register_user(int connection_socket_descriptor, char buf[MAX]){
 
@@ -264,8 +217,6 @@ void register_user(int connection_socket_descriptor, char buf[MAX]){
               log_size=i;
        }
 
-   printf("Username: %s\n", username);
-
    for (int i=0;i<MAX;i++){
 
             found = strcmp(clients[i].username,username);
@@ -277,7 +228,6 @@ void register_user(int connection_socket_descriptor, char buf[MAX]){
 
    if(found==0){
             char buf[]="User already exists\n";
-            printf("User already exists\n");
             write(connection_socket_descriptor, buf, sizeof(buf));
             close(connection_socket_descriptor);
     }
@@ -287,34 +237,29 @@ void register_user(int connection_socket_descriptor, char buf[MAX]){
                password[i-log_size-2]=buf[i];
          }
 
-         printf("Added password: %s\n", password);
-
         strcpy(clients[users_number].username,username);
         strcpy(clients[users_number].password,password);
-        clients[users_number].id = users_number;
+
         users_number+=1;
 
         char buf[]="User registered\n";
         write(connection_socket_descriptor, buf, sizeof(buf));
 
-
-        printf("User registered - %s\n",username);
-
     }
 
 }
 
-int load_friends_list(int index, char* str){
+int load_friends_list(int idx, char* list){
 
     for (int i=0; i<MAX;i++){
-        if(clients[index].friends_list[i]==1){
-            strcat(str,clients[i].username);
-            strcat(str,"\t");
+        if(clients[idx].friends_list[i]==1){
+            strcat(list,clients[i].username);
+            strcat(list,"\t");
         }
     }
-    int size = strlen(str);
-    str = realloc(str,size+1);
-    strcat(str,"\n");
+    int size = strlen(list);
+    list = realloc(list,size+1);
+    strcat(list,"\n");
 
     return size;
 
@@ -345,7 +290,7 @@ int login(int connection_socket_descriptor, char buf[MAX]){
     if(found!=0){
 
         char buf[]="User not found\n";
-        printf("User not found\n");
+        //printf("User not found\n");
         write(connection_socket_descriptor, buf, sizeof(buf));
         close(connection_socket_descriptor);
         return -1;
@@ -358,56 +303,51 @@ int login(int connection_socket_descriptor, char buf[MAX]){
         int pass_correct = strcmp(password,clients[idx].password);
         if(pass_correct!=0){
             char buf[]="Wrong password\n";
-            int readOutput = write(connection_socket_descriptor, buf, sizeof(buf));
+            write(connection_socket_descriptor, buf, sizeof(buf));
             close(connection_socket_descriptor);
             return -1;
 
         }
         else{
-
-            int size=0;
-
-            char *list = malloc(MAX*(MAX+2)*sizeof(char));
-            size = load_friends_list(idx,list);
-
-            printf("SIZE: %d\n", size);
-
-            char buf[]="Login successful\n";
-            write(connection_socket_descriptor, buf, sizeof(buf));
-
-            if(size!=0){
-                char buf3[MAX]="full\n";
-                write(connection_socket_descriptor, buf3, sizeof(buf3));
-                //printf("Wysylam liste\n");
-
-                char list2[size+1];
-                strcpy(list2, list);
-                strcat(list2, "\n");
-                //printf("Lista: %s\n", list2);
-
-                write(connection_socket_descriptor, list2, sizeof(list2));
+            if(clients[idx].if_logged_in == 1){
+                char buf[]="User is already logged in!\n";
+                write(connection_socket_descriptor, buf, sizeof(buf));
+                close(connection_socket_descriptor);
+                return -1;
             }
             else{
-                char buf3[MAX]="empty\n";
-                write(connection_socket_descriptor, buf3, sizeof(buf3));
+
+                int size=0;
+                char *list = malloc(MAX*(MAX+2)*sizeof(char));
+                size = load_friends_list(idx,list);
+
+                char buf[]="Login successful\n";
+                write(connection_socket_descriptor, buf, sizeof(buf));
+
+                if(size!=0){
+                    char buf3[MAX]="full\n";
+                    write(connection_socket_descriptor, buf3, sizeof(buf3));
+                    char list2[size+1];
+                    strcpy(list2, list);
+                    strcat(list2, "\n");
+
+                    write(connection_socket_descriptor, list2, sizeof(list2));
+                }
+                else{
+                    char buf3[MAX]="empty\n";
+                    write(connection_socket_descriptor, buf3, sizeof(buf3));
+                }
+                clients[idx].fd = connection_socket_descriptor;
+                clients[idx].if_logged_in = 1;
+                //printf("Login successful\n");
 
             }
-
-            clients[idx].fd = connection_socket_descriptor;
-            clients[idx].status = 1;
-            printf("Login successful\n");
-
             return idx;
-
-
         }
-
     }
 
    return 1;
-
 }
-
 
 int main(int argc, char* argv[])
 {
@@ -421,9 +361,6 @@ int main(int argc, char* argv[])
 
    pthread_t thread, thread2;
    int create_result = 0;
-   int create_result2 = 0;
-
-   //inicjalizacja gniazda serwera
 
    memset(&server_address, 0, sizeof(struct sockaddr));
    server_address.sin_family = AF_INET;
@@ -450,15 +387,11 @@ int main(int argc, char* argv[])
        fprintf(stderr, "%s: Błąd przy próbie ustawienia wielkości kolejki.\n", argv[0]);
        exit(1);
    }
-   char buf[100];
-
 
    socklen_t clilen = sizeof(cli_addr);
-   //printf("Check\n");
 
    while(1)
    {
-
 
        connection_socket_descriptor = accept(server_socket_descriptor, (struct sockaddr*)&cli_addr, &clilen);
        if (connection_socket_descriptor < 0)
@@ -472,16 +405,13 @@ int main(int argc, char* argv[])
         write(connection_socket_descriptor, "Too many users\n", 14* sizeof(char));
         close(connection_socket_descriptor);
 
-
        }
        else{
 
            char option[MAX];
 
            memset(option, 0, sizeof(option));
-           //for(int i=0;i<sizeof(option);i++){option[i]='\0';}
            read(connection_socket_descriptor,option,sizeof(option));
-           flg=0;
 
            if(option[0] == 'R'){
 
@@ -491,15 +421,13 @@ int main(int argc, char* argv[])
 
            else if(option[0]=='L'){
             int cur_idx;
-            //printf("Check\n");
 
             cur_idx = login(connection_socket_descriptor, option);
             if(cur_idx != -1){
 
-
                 struct index *t_data = (struct index*)malloc(sizeof(struct index));
                 t_data->id = cur_idx;
-                printf("Check\n");
+                //printf("Check\n");
 
                 create_result = pthread_create(&thread, NULL, ThreadBehavior, (void *)t_data);
                 if (create_result){
@@ -508,7 +436,6 @@ int main(int argc, char* argv[])
                 }
 
             }
-
 
            }
 
