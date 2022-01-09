@@ -31,6 +31,10 @@ public class Client {
 
     }
 
+    public static Socket getClientSocket() {
+        return clientSocket;
+    }
+
     public void new_socket(String host,int port) throws IOException {
         this.clientSocket.close();
         Socket clientSocket_new = new Socket(host,port);

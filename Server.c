@@ -325,7 +325,7 @@ int login(int connection_socket_descriptor, char buf[MAX]){
                 write(connection_socket_descriptor, buf, sizeof(buf));
 
                 if(size!=0){
-                    char buf3[MAX]="full\n";
+                    char buf3[]="full\n";
                     write(connection_socket_descriptor, buf3, sizeof(buf3));
                     char list2[size+1];
                     strcpy(list2, list);
@@ -334,7 +334,7 @@ int login(int connection_socket_descriptor, char buf[MAX]){
                     write(connection_socket_descriptor, list2, sizeof(list2));
                 }
                 else{
-                    char buf3[MAX]="empty\n";
+                    char buf3[]="empty\n";
                     write(connection_socket_descriptor, buf3, sizeof(buf3));
                 }
                 clients[idx].fd = connection_socket_descriptor;
@@ -400,45 +400,47 @@ int main(int argc, char* argv[])
            exit(1);
        }
 
-       if((users_number) == MAX){
 
-        write(connection_socket_descriptor, "Too many users\n", 14* sizeof(char));
-        close(connection_socket_descriptor);
+       char option[MAX];
 
-       }
-       else{
+       memset(option, 0, sizeof(option));
+       read(connection_socket_descriptor,option,sizeof(option));
 
-           char option[MAX];
+       if(option[0] == 'R'){
 
-           memset(option, 0, sizeof(option));
-           read(connection_socket_descriptor,option,sizeof(option));
+            if((users_number) == MAX){
 
-           if(option[0] == 'R'){
-
-               register_user(connection_socket_descriptor, option);
+                    write(connection_socket_descriptor, "Too many users\n", 14* sizeof(char));
+                    close(connection_socket_descriptor);
 
            }
+           else{
 
-           else if(option[0]=='L'){
-            int cur_idx;
+                register_user(connection_socket_descriptor, option);
+           }
 
-            cur_idx = login(connection_socket_descriptor, option);
-            if(cur_idx != -1){
-                struct index *t_data = (struct index*)malloc(sizeof(struct index));
-                t_data->id = cur_idx;
-                //printf("Check\n");
+       }
 
-                create_result = pthread_create(&thread, NULL, ThreadBehavior, (void *)t_data);
-                if (create_result){
-                    printf("Błąd przy próbie utworzenia wątku, kod błędu: %d\n", create_result);
-                    exit(-1);
-                }
+       else if(option[0]=='L'){
+        int cur_idx;
 
+        cur_idx = login(connection_socket_descriptor, option);
+        if(cur_idx != -1){
+            struct index *t_data = (struct index*)malloc(sizeof(struct index));
+            t_data->id = cur_idx;
+            //printf("Check\n");
+
+            create_result = pthread_create(&thread, NULL, ThreadBehavior, (void *)t_data);
+            if (create_result){
+                printf("Błąd przy próbie utworzenia wątku, kod błędu: %d\n", create_result);
+                exit(-1);
             }
 
-           }
+        }
 
        }
+
+
 
    }
 

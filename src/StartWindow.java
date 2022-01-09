@@ -21,6 +21,7 @@ public class StartWindow {
     private JLabel empty_error;
     private JLabel empty_error2;
     private JLabel user_exist;
+    private JLabel to_many;
     private JTextField host;
     private JTextField port;
     private JFrame frame;
@@ -35,6 +36,7 @@ public class StartWindow {
     public StartWindow() throws IOException {
 
         user_exist.setVisible(false);
+        to_many.setVisible(false);
         empty_error.setVisible(false);
         empty_error2.setVisible(false);
         login_success.setVisible(false);
@@ -119,6 +121,7 @@ public class StartWindow {
             public void actionPerformed(ActionEvent e) {
 
                 user_exist.setVisible(false);
+                to_many.setVisible(false);
                 empty_error.setVisible(false);
                 empty_error2.setVisible(false);
                 login_error.setVisible(false);
@@ -147,7 +150,12 @@ public class StartWindow {
                     }
                     if (message.equals("User already exists")) {
                         user_exist.setVisible(true);
-                    } else {
+                    }
+                    else if(message.equals("Too many users")) {
+                        to_many.setVisible(true);
+                    }
+
+                    else {
 
                         client.new_socket(get_host, get_port);
                         client.checkLogin();
