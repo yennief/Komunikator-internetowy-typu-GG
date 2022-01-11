@@ -20,6 +20,7 @@ public class Chat {
     private JTextField send_msg_field;
     private JList friends_list;
     private JTextPane chat;
+    private JScrollBar scrollPane;
     private String message = "";
     private Client client;
     private String userName;
@@ -33,6 +34,8 @@ public class Chat {
         user_does_not_exist.setVisible(false);
 
         user_name.setText(client.getUsername());
+        chat.setEditable(false);
+
         MyRunnable mr = new MyRunnable();
         Thread thread = new Thread(mr);
         thread.start();
@@ -120,13 +123,6 @@ public class Chat {
                     else {
                         message_to=client.getFriend(friends_list.getSelectedIndex());
                         chat.setText(client.load_conversation(message_to.trim()));
-
-                        //List<String> list_friends_copy = new ArrayList<>(client.getFriends_list());
-                        //System.out.println(list_friends_copy.get(friends_list.getSelectedIndex()));
-                        //list_friends_copy.set(friends_list.getSelectedIndex(), message_to.trim());
-                        //load_list_friends(friends_list,list_friends_copy);
-
-
                     }
                 } catch (IOException ex) {
                     //ex.printStackTrace();
@@ -164,6 +160,10 @@ public class Chat {
 
     }
 
+    private void createUIComponents() {
+        // TODO: place custom component creation code here
+    }
+
     public class MyRunnable implements Runnable{
         @Override
         public void run(){
@@ -174,12 +174,9 @@ public class Chat {
 
                     message = client.receive_msg();
                     if (!message.equals("")) {
-
-                        //System.out.println(message);
                         String message2 = message.substring(0,1);
-                        //System.out.println(message2);
-                        if(message2.equals("a")){
 
+                        if(message2.equals("a")){
                             message = message.substring(2);
                             check_name_in_list(message.trim(),client.getFriends_list());
                         }
@@ -187,21 +184,10 @@ public class Chat {
                             message = message.substring(2);
                             delete_name_from_list(message.trim(),client.getFriends_list());
                         }
-                        /*else if(message2.equals("m")){
-                            System.out.println("Odczytuje wiadomosc");
+                        else if(message2.equals("s")){
                             message = message.substring(2);
-                            System.out.println(message);
-                            List<String> list = new ArrayList<>(client.getFriends_list());
-                            for (int i = 0; i < list.size(); i++) {
-                                if (list .get(i).equals(message.trim())) {
-                                    list .set(i, message + "- new message");
-                                    load_list_friends(friends_list,list);
-
-                                }
-                            }
-
-
-                        }*/
+                            chat.setText(client.load_conversation(message.trim()));
+                        }
 
                     }
 

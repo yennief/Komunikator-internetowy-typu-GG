@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="Komunikator-internetowy-typu-GG:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/Komunikator_internetowy_typu_GG_jar</output-path>
+    <root id="archive" name="Komunikator-internetowy-typu-GG.jar">
+      <element id="module-output" name="Komunikator-internetowy-typu-GG" />
+    </root>
+  </artifact>
+</component>

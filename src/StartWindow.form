@@ -119,7 +119,7 @@
           </grid>
         </constraints>
         <properties>
-          <text value="1234"/>
+          <text value="8000"/>
         </properties>
       </component>
       <component id="43101" class="javax.swing.JTextField" binding="host">

@@ -12,14 +12,18 @@
 #include <time.h>
 #include <pthread.h>
 
-#define SERVER_PORT 1234
 #define QUEUE_SIZE 5
 #define MAX 100
 #define BUF 1024
 
-struct index
+pthread_mutex_t example_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void register_user(int connection_socket_descriptor, char buf[MAX]);
+int login(int connection_socket_descriptor, char buf[MAX]);
+
+struct desc
 {
-    int id;
+    int fd;
 };
 
 typedef struct
@@ -37,8 +41,6 @@ thread_data_t clients[MAX];
 
 int users_number=0;
 
-pthread_mutex_t clients_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 void add_friend(char *login_friend, int idx){
 
     int found;
@@ -48,6 +50,8 @@ void add_friend(char *login_friend, int idx){
 
             clients[idx].friends_list[i]=1;
             clients[i].friends_list[idx]=1;
+            printf("User %s added user %s\n",clients[idx].username, clients[i].username);
+            printf("User %s automatically added user %s as well\n",clients[i].username,clients[idx].username);
             char buf[]="Added friend\n";
             write(clients[idx].fd ,buf, sizeof(buf));
 
@@ -100,10 +104,8 @@ void send_message(char* username,int idx,char received_msg[]){
 
     char message[4+MAX+BUF]="m\t";
     int found;
-    //printf("%d\n", idx);
     for (int i=0;i<users_number;i++){
         found = strcmp(clients[i].username,username);
-        //printf("%d\n", found);
         if(found == 0 && clients[idx].friends_list[i]==1 && idx != i){
             strcat(message,clients[idx].username);
             strcat(message,":");
@@ -112,16 +114,16 @@ void send_message(char* username,int idx,char received_msg[]){
             strcat(message,"\n");
             strcat(clients[i].messages[idx],message);
             strcat(clients[idx].messages[i],message);
-            /*if(clients[idx].if_logged_in==1){
-                char message2[4+MAX]="m\t";
-                strcat(message2,clients[idx].username);
-                strcat(message2,"\t");
-                strcat(message2,"\n");
-                write(clients[i].fd,message2,sizeof(message2));
-            }*/
-            //printf("Check sending\n");
+
+            printf("%s sent a message to %s\n",clients[idx].username, clients[i].username);
             char buf[]="sent\n";
             write(clients[idx].fd ,buf, sizeof(buf));
+            if(clients[i].if_logged_in==1){
+                char buf2[4+MAX]="s\t";
+                strcat(buf2,clients[idx].username);
+                strcat(buf2,"\n");
+                write(clients[i].fd ,buf2, sizeof(buf2));
+            }
 
             return;
         }
@@ -139,9 +141,10 @@ void delete_friend(int idx, char *username){
 
             clients[idx].friends_list[i]=0;
             clients[i].friends_list[idx]=0;
+            printf("User %s deleted user %s\n",clients[idx].username, clients[i].username);
+            printf("User %s automatically deleted user %s as well\n",clients[i].username,clients[idx].username);
             char buf[]="Deleted friend\n";
             write(clients[idx].fd ,buf, sizeof(buf));
-
             char buf2[4+MAX]="d\t";
             strcat(buf2,clients[idx].username);
             strcat(buf2,"\n");
@@ -158,12 +161,40 @@ void delete_friend(int idx, char *username){
 void *ThreadBehavior(void *t_data)
 {
 
-    pthread_detach(pthread_self());
-    struct index *th_data = (struct index*)t_data;
+    struct desc* data = (struct desc*)t_data;
+
+    int cur_idx = -1;
+    char option[MAX];
+
+    memset(option, 0, sizeof(option));
+    read(data->fd,option,sizeof(option));
+
+   if(option[0] == 'R'){
+
+        if((users_number) == MAX){
+
+                write(data->fd, "Too many users\n", 14* sizeof(char));
+                close(data->fd);
+       }
+       else{
+            register_user(data->fd, option);
+       }
+
+   }
+   else if(option[0]=='L'){
+    cur_idx = login(data->fd, option);
+
+  }
+
+  if(cur_idx == -1){
+         close(data->fd);
+         return NULL;
+    }
 
     while(1){
+
         char buf[4+MAX+BUF]="";
-        read(clients[th_data->id].fd, buf, sizeof(buf));
+        read(clients[cur_idx].fd, buf, sizeof(buf));
         char username[MAX]="";
         char message[BUF]="";
         int login_size=0;
@@ -174,13 +205,16 @@ void *ThreadBehavior(void *t_data)
         }
 
         if(buf[0]=='A'){
-
-           add_friend(username,th_data->id);
+           pthread_mutex_lock(&example_mutex);
+           add_friend(username,cur_idx);
+           pthread_mutex_unlock(&example_mutex);
 
         }
         else if(buf[0]=='l'){
 
-            load_conversation(username, th_data->id);
+            pthread_mutex_lock(&example_mutex);
+            load_conversation(username, cur_idx);
+            pthread_mutex_unlock(&example_mutex);
 
         }
         else if(buf[0]=='M'){
@@ -190,14 +224,21 @@ void *ThreadBehavior(void *t_data)
                   message_size=i;
             }
 
-            send_message(username,th_data->id,message);
+            pthread_mutex_lock(&example_mutex);
+            send_message(username,cur_idx,message);
+            pthread_mutex_unlock(&example_mutex);
 
         }
         else if(buf[0]=='Q'){
-            clients[th_data->id].if_logged_in=0;
+            pthread_mutex_lock(&example_mutex);
+            clients[cur_idx].if_logged_in=0;
+            printf("%s logged out\n",username);
+            pthread_mutex_unlock(&example_mutex);
         }
         else if(buf[0]=='D'){
-            delete_friend(th_data->id,username);
+            pthread_mutex_lock(&example_mutex);
+            delete_friend(cur_idx,username);
+            pthread_mutex_unlock(&example_mutex);
         }
     }
 
@@ -243,6 +284,7 @@ void register_user(int connection_socket_descriptor, char buf[MAX]){
         users_number+=1;
 
         char buf[]="User registered\n";
+        printf("User %s has registered\n", clients[users_number-1].username);
         write(connection_socket_descriptor, buf, sizeof(buf));
 
     }
@@ -290,7 +332,6 @@ int login(int connection_socket_descriptor, char buf[MAX]){
     if(found!=0){
 
         char buf[]="User not found\n";
-        //printf("User not found\n");
         write(connection_socket_descriptor, buf, sizeof(buf));
         close(connection_socket_descriptor);
         return -1;
@@ -306,7 +347,6 @@ int login(int connection_socket_descriptor, char buf[MAX]){
             write(connection_socket_descriptor, buf, sizeof(buf));
             close(connection_socket_descriptor);
             return -1;
-
         }
         else{
             if(clients[idx].if_logged_in == 1){
@@ -322,6 +362,7 @@ int login(int connection_socket_descriptor, char buf[MAX]){
                 size = load_friends_list(idx,list);
 
                 char buf[]="Login successful\n";
+                printf("User %s has logged in\n", clients[idx].username);
                 write(connection_socket_descriptor, buf, sizeof(buf));
 
                 if(size!=0){
@@ -339,7 +380,6 @@ int login(int connection_socket_descriptor, char buf[MAX]){
                 }
                 clients[idx].fd = connection_socket_descriptor;
                 clients[idx].if_logged_in = 1;
-                //printf("Login successful\n");
 
             }
             return idx;
@@ -362,10 +402,16 @@ int main(int argc, char* argv[])
    pthread_t thread;
    int create_result = 0;
 
+   if (argc != 2)
+      {
+        fprintf(stderr, "Sposób użycia: %s port_number\n", argv[0]);
+        exit(1);
+      }
+
    memset(&server_address, 0, sizeof(struct sockaddr));
    server_address.sin_family = AF_INET;
    server_address.sin_addr.s_addr = htonl(INADDR_ANY);
-   server_address.sin_port = htons(SERVER_PORT);
+   server_address.sin_port = htons(atoi(argv[1]));
 
    server_socket_descriptor = socket(AF_INET, SOCK_STREAM, 0);
    if (server_socket_descriptor < 0)
@@ -400,47 +446,16 @@ int main(int argc, char* argv[])
            exit(1);
        }
 
+       struct desc *t_data0 = (struct desc*)malloc(sizeof(struct desc));
+       t_data0->fd = connection_socket_descriptor;
 
-       char option[MAX];
+       create_result = pthread_create(&thread, NULL, ThreadBehavior, (void *)t_data0);
 
-       memset(option, 0, sizeof(option));
-       read(connection_socket_descriptor,option,sizeof(option));
-
-       if(option[0] == 'R'){
-
-            if((users_number) == MAX){
-
-                    write(connection_socket_descriptor, "Too many users\n", 14* sizeof(char));
-                    close(connection_socket_descriptor);
-
-           }
-           else{
-
-                register_user(connection_socket_descriptor, option);
-           }
-
+       if (create_result){
+           printf("Błąd przy próbie utworzenia wątku, kod błędu: %d\n", create_result);
+           exit(-1);
        }
-
-       else if(option[0]=='L'){
-        int cur_idx;
-
-        cur_idx = login(connection_socket_descriptor, option);
-        if(cur_idx != -1){
-            struct index *t_data = (struct index*)malloc(sizeof(struct index));
-            t_data->id = cur_idx;
-            //printf("Check\n");
-
-            create_result = pthread_create(&thread, NULL, ThreadBehavior, (void *)t_data);
-            if (create_result){
-                printf("Błąd przy próbie utworzenia wątku, kod błędu: %d\n", create_result);
-                exit(-1);
-            }
-
-        }
-
-       }
-
-
+       pthread_detach(thread);
 
    }
 

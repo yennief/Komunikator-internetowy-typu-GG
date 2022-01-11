@@ -89,7 +89,7 @@ public class StartWindow {
                                         JOptionPane.QUESTION_MESSAGE, null, null, null);
                                 if (if_exit == 0) {
                                     try {
-                                        client.log_out();
+                                        client.log_out(client.getUsername());
                                     } catch (IOException ex) {
                                         ex.printStackTrace();
                                     }
@@ -171,7 +171,7 @@ public class StartWindow {
                                         JOptionPane.QUESTION_MESSAGE, null, null, null);
                                 if (if_exit == 0) {
                                     try {
-                                        client.log_out();
+                                        client.log_out(client.getUsername());
                                     } catch (IOException ex) {
                                         ex.printStackTrace();
                                     }

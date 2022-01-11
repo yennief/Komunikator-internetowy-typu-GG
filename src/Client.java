@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
+
 public class Client {
 
     private static Socket clientSocket = null;
@@ -116,19 +117,18 @@ public class Client {
 
     }
 
-    public boolean send_message(String to_who, String message) throws IOException {
+    public void send_message(String to_who, String message) throws IOException {
 
         mutex=false;
         PrintWriter writer = new PrintWriter(clientSocket.getOutputStream(), true);
         writer.println("M"+"\t"+to_who+"\t"+message+"\t");
         BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
         String get_message = reader.readLine();
-        if(get_message.equals("sent")){
-            System.out.println(get_message);
-
-        }
+        //if(get_message.equals("sent")){
+            //System.out.println(get_message);
+        //}
         mutex=true;
-        return true;
+        //return true;
 
     }
 
@@ -155,6 +155,7 @@ public class Client {
 
     }
 
+
     public String receive_msg() throws IOException {
 
         String get_message="";
@@ -165,12 +166,11 @@ public class Client {
         return get_message;
     }
 
-    public void log_out() throws IOException {
+    public void log_out(String username) throws IOException {
         PrintWriter writer = new PrintWriter(clientSocket.getOutputStream(), true);
-        writer.println("Q"+"\t");
+        writer.println("Q"+"\t"+username+"\t");
 
     }
-
 
     public void close(Socket clientSocket){
         try{
