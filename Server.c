@@ -198,7 +198,6 @@ void *ThreadBehavior(void *t_data)
         char username[MAX]="";
         char message[BUF]="";
         int login_size=0;
-        int message_size=0;
         for(int i=2;i<MAX+2 && buf[i]!='\t';i++){
             username[i-2]=buf[i];
             login_size=i;
@@ -221,7 +220,7 @@ void *ThreadBehavior(void *t_data)
 
             for(int i=2+login_size;i<2+login_size+BUF && buf[i]!='\t';i++){
                   message[i-2-login_size]=buf[i];
-                  message_size=i;
+
             }
 
             pthread_mutex_lock(&example_mutex);
@@ -249,7 +248,6 @@ void register_user(int connection_socket_descriptor, char buf[MAX]){
 
    char username[MAX]="";
    char password[MAX]="";
-   int idx;
    int found = 1;
    int log_size=0;
 
@@ -262,7 +260,6 @@ void register_user(int connection_socket_descriptor, char buf[MAX]){
 
             found = strcmp(clients[i].username,username);
             if(found==0){
-                idx=i;
                 break;
             }
     }

@@ -108,7 +108,7 @@ public class StartWindow {
 
                 } catch (Exception ex) {
                     //ex.printStackTrace();
-                    System.out.println("Problem z logowaniem");
+                    //System.out.println("Problem z logowaniem");
                     empty_error.setVisible(true);
 
                 }
@@ -190,7 +190,7 @@ public class StartWindow {
 
                 } catch (Exception ex) {
                     //ex.printStackTrace();
-                    System.out.println("Problem z rejestracja");
+                    //System.out.println("Problem z rejestracja");
                     empty_error2.setVisible(true);
                 }
             }

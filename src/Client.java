@@ -4,8 +4,6 @@ import java.net.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Scanner;
-
 
 public class Client {
 
@@ -32,10 +30,6 @@ public class Client {
 
     }
 
-    public static Socket getClientSocket() {
-        return clientSocket;
-    }
-
     public void new_socket(String host,int port) throws IOException {
         this.clientSocket.close();
         Socket clientSocket_new = new Socket(host,port);
@@ -53,7 +47,6 @@ public class Client {
         writer.println("L"+"\t"+username+"\t"+userPassword+"\t");
         BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
         get_message = reader.readLine();
-        System.out.printf(get_message+"\n");
         if (!get_message.equals("User not found") && !get_message.equals("Wrong password")) {
             empty_or_full = reader.readLine();
             if(empty_or_full.trim().equals("full")){
@@ -63,9 +56,7 @@ public class Client {
             else if(empty_or_full.trim().equals("empty")){
                 this.friends_list =  new ArrayList<>();
             }
-
         }
-
         return get_message;
 
     }
@@ -77,7 +68,6 @@ public class Client {
         writer.println("R"+"\t"+username+"\t"+userPassword+"\t");
         BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
         get_message = reader.readLine();
-        //System.out.printf(serverMessage+"\n");
         return get_message;
     }
 
@@ -124,11 +114,7 @@ public class Client {
         writer.println("M"+"\t"+to_who+"\t"+message+"\t");
         BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
         String get_message = reader.readLine();
-        //if(get_message.equals("sent")){
-            //System.out.println(get_message);
-        //}
         mutex=true;
-        //return true;
 
     }
 
@@ -195,7 +181,4 @@ public class Client {
         return friends_list.get(idx);
     }
 
-    public void setFriends_list(List<String> friends_list) {
-        this.friends_list = friends_list;
-    }
 }
